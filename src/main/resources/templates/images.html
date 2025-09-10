@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Image Manager</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+        :root{
+            --bg: #0f1226; --panel:#151a33; --text:#eef1ff; --muted:#9aa3c1;
+            --line:#2b3157; --accent:#6c8bff; --accent2:#5ae0b5; --danger:#ff6b6b;
+            --btn:#6c8bff; --btn-ghost:transparent;
+        }
+        :root.light{
+            --bg:#f7f8fc; --panel:#ffffff; --text:#0e1328; --muted:#5b6073;
+            --line:#e8eaf4; --accent:#365cff; --accent2:#10b981; --danger:#ef4444;
+            --btn:#365cff; --btn-ghost:#ffffff;
+        }
+        *{box-sizing:border-box}
+        html,body{height:100%;margin:0;font:15px/1.5 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}
+        body{background:var(--bg);color:var(--text)}
+        .container{max-width:1100px;margin:0 auto;padding:24px}
+        header{display:flex;gap:16px;align-items:center;justify-content:space-between;margin-bottom:18px}
+        .title{font-size:28px;font-weight:800;color:var(--accent);letter-spacing:.3px}
+        .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+        input[type="text"]{padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:transparent;color:var(--text)}
+        input[type="file"]{color:var(--text)}
+        button{all:unset;background:var(--btn);color:#fff;padding:10px 14px;border-radius:10px;cursor:pointer;font-weight:700;
+            box-shadow:0 8px 18px rgba(86,112,255,.35)}
+        .ghost{background:var(--btn-ghost);border:1px solid var(--line);color:var(--text);box-shadow:none}
+        .muted{color:var(--muted)}
+        .panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px}
+        table{width:100%;border-collapse:collapse}
+        th,td{padding:14px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle}
+        thead th{font-weight:800;color:var(--muted);font-size:13px;text-transform:uppercase;letter-spacing:.3px}
+        tr:hover{background:rgba(108,139,255,.08)}
+        img.thumb{max-width:78px;max-height:78px;border-radius:8px;border:1px solid var(--line);display:block}
+        .right{display:flex;gap:8px;justify-content:flex-end}
+        .pill{padding:4px 10px;border-radius:999px;border:1px solid var(--line);font-size:12px;color:var(--muted)}
+        .status{min-height:22px;margin:10px 2px 14px;font-weight:600}
+        .ok{color:var(--accent2)} .err{color:var(--danger)}
+
+        /* modal */
+        .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;place-items:center;z-index:50}
+        .modal{width:min(520px,92vw);background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px}
+        .modal h3{margin:0 0 12px}
+        .modal .actions{display:flex;gap:10px;justify-content:flex-end;margin-top:12px}
+        .switch{display:flex;align-items:center;gap:8px}
+        .switch input{width:46px;height:24px;appearance:none;background:var(--line);border-radius:999px;position:relative;outline:none;cursor:pointer}
+        .switch input::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:999px;background:#fff;transition:left .2s}
+        .switch input:checked{background:var(--accent)}
+        .switch input:checked::after{left:25px}
+    </style>
+</head>
+<body>
+<div class="container">
+    <header>
+        <div class="title">Image Manager</div>
+        <label class="switch">
+            <span class="muted">Light</span>
+            <input id="themeToggle" type="checkbox" />
+            <span class="muted">Dark</span>
+        </label>
+    </header>
+
+    <div class="panel">
+        <form id="uploadForm" class="row">
+            <input type="file" name="file" id="file" required>
+            <input type="text" name="uploadedBy" placeholder="Your name (optional)" />
+            <button type="submit">Upload</button>
+            <button type="button" class="ghost" id="refreshBtn">Refresh</button>
+        </form>
+        <div id="status" class="status"></div>
+
+        <div style="overflow:auto">
+            <table id="imageTable">
+                <thead>
+                <tr>
+                    <th>Preview</th>
+                    <th>Filename</th>
+                    <th>Type</th>
+                    <th>Size</th>
+                    <th>Uploaded By</th>
+                    <th>Uploaded At</th>
+                    <th class="right">Actions</th>
+                </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Edit modal -->
+<div class="modal-backdrop" id="editBackdrop">
+    <div class="modal">
+        <h3>Edit Metadata</h3>
+        <form id="editForm">
+            <input type="hidden" id="editId">
+            <div class="row" style="margin-bottom:8px">
+                <label class="pill" style="min-width:130px">Original Filename</label>
+                <input id="editFilename" type="text" style="flex:1">
+            </div>
+            <div class="row">
+                <label class="pill" style="min-width:130px">Uploaded By</label>
+                <input id="editBy" type="text" style="flex:1">
+            </div>
+            <div class="actions">
+                <button type="button" class="ghost" id="cancelEdit">Cancel</button>
+                <button type="submit">Save</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    /* ---------- Theme toggle ---------- */
+    (function themeInit(){
+        const root = document.documentElement;
+        const toggle = document.getElementById('themeToggle');
+        const saved = localStorage.getItem('theme') || 'dark';
+        if(saved === 'light'){ root.classList.add('light'); toggle.checked = false; } else { toggle.checked = true; }
+        toggle.addEventListener('change', ()=>{
+            if(toggle.checked){ root.classList.remove('light'); localStorage.setItem('theme','dark'); }
+            else { root.classList.add('light'); localStorage.setItem('theme','light'); }
+        });
+    })();
+
+    /* ---------- API helpers ---------- */
+    async function listAll() {
+        const r = await fetch('/images/allmeta');
+        if(!r.ok) throw new Error('list failed');
+        return r.json();
+    }
+    async function deleteOne(id){
+        const r = await fetch('/images/'+id, {method:'DELETE'});
+        if(!r.ok) throw new Error('delete failed');
+    }
+    async function updateMeta(id, payload){
+        const r = await fetch('/images/'+id+'/meta', {
+            method:'PUT', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify(payload)
+        });
+        if(!r.ok) throw new Error('update failed');
+        return r.json();
+    }
+
+    /* ---------- DOM rendering ---------- */
+    const tbody = document.querySelector('#imageTable tbody');
+    function bytes(n){
+        if(n<1024) return n+' B';
+        if(n<1024*1024) return (n/1024).toFixed(1)+' KB';
+        return (n/1024/1024).toFixed(1)+' MB';
+    }
+    function row(meta){
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+    <td><img class="thumb" src="/images/${meta.id}" alt=""></td>
+    <td>${meta.originalFilename ?? ''}</td>
+    <td>${meta.contentType}</td>
+    <td>${bytes(meta.sizeBytes)}</td>
+    <td>${meta.uploadedBy ?? ''}</td>
+    <td>${meta.uploadedAt}</td>
+    <td class="right">
+      <button type="button" class="ghost" data-act="download" data-id="${meta.id}">Download</button>
+      <button type="button" data-act="edit" data-id="${meta.id}" data-name="${meta.originalFilename??''}" data-by="${meta.uploadedBy??''}">Edit</button>
+      <button type="button" class="ghost" style="color:var(--danger);border-color:var(--danger)" data-act="delete" data-id="${meta.id}">Delete</button>
+    </td>`;
+        return tr;
+    }
+    async function render(){
+        const data = await listAll();
+        tbody.innerHTML = '';
+        data.forEach(m => tbody.appendChild(row(m)));
+    }
+
+    /* ---------- Upload ---------- */
+    const statusEl = document.getElementById('status');
+    document.getElementById('uploadForm').addEventListener('submit', async (e)=>{
+        e.preventDefault();
+        const fd = new FormData(e.target);
+        statusEl.textContent = 'Uploading...';
+        const res = await fetch('/images/upload', {method:'POST', body: fd});
+        if(res.ok){ statusEl.textContent = 'Upload successful!'; statusEl.className='status ok'; await render(); e.target.reset(); }
+        else { statusEl.textContent = 'Upload failed!'; statusEl.className='status err'; }
+    });
+    document.getElementById('refreshBtn').addEventListener('click', render);
+
+    /* ---------- Row actions ---------- */
+    tbody.addEventListener('click', async (e)=>{
+        const btn = e.target.closest('button[data-act]');
+        if(!btn) return;
+        const id = btn.getAttribute('data-id');
+        const act = btn.getAttribute('data-act');
+        if(act==='download'){
+            window.open('/images/'+id, '_blank');
+        }else if(act==='delete'){
+            if(confirm('Delete this image?')){
+                try{ await deleteOne(id); await render(); }
+                catch(err){ alert('Delete failed'); }
+            }
+        }else if(act==='edit'){
+            openEdit(id, btn.getAttribute('data-name')||'', btn.getAttribute('data-by')||'');
+        }
+    });
+
+    /* ---------- Edit modal ---------- */
+    const backdrop = document.getElementById('editBackdrop');
+    const editId = document.getElementById('editId');
+    const editFilename = document.getElementById('editFilename');
+    const editBy = document.getElementById('editBy');
+    function openEdit(id, name, by){
+        editId.value = id; editFilename.value = name; editBy.value = by;
+        backdrop.style.display = 'grid';
+    }
+    document.getElementById('cancelEdit').addEventListener('click', ()=> backdrop.style.display='none');
+    document.getElementById('editForm').addEventListener('submit', async (e)=>{
+        e.preventDefault();
+        const payload = { originalFilename: editFilename.value, uploadedBy: editBy.value };
+        try{
+            await updateMeta(editId.value, payload);
+            backdrop.style.display='none';
+            await render();
+        }catch(err){
+            alert('Update failed');
+        }
+    });
+
+    /* init */
+    render();
+</script>
+</body>
+</html>
