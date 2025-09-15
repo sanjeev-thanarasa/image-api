@@ -11,5 +11,7 @@ public record ImageMetaResponse(
         Instant uploadedAt,
         String checksumSha256,
         Integer width,
-        Integer height
+        Integer height,
+        String referenceId,
+        String referenceType
 ) {}

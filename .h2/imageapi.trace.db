@@ -1,0 +1,15 @@
+2025-09-15 15:38:23.024920+05:30 jdbc[13]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Table "REFERENCE_ID" not found; SQL statement:
+delete REFERENCE_ID [42102-232]
+2025-09-15 15:39:13.720573+05:30 jdbc[13]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Syntax error in SQL statement "[*]REFERENCE_TYPE delete"; expected "ROLLBACK, REVOKE, RUNSCRIPT, RELEASE, REFRESH"; SQL statement:
+REFERENCE_TYPE delete [42001-232]
+2025-09-15 15:39:14.985032+05:30 jdbc[13]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Syntax error in SQL statement "[*]REFERENCE_TYPE delete"; expected "ROLLBACK, REVOKE, RUNSCRIPT, RELEASE, REFRESH"; SQL statement:
+REFERENCE_TYPE delete [42001-232]
+2025-09-15 15:39:44.163805+05:30 jdbc[13]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Syntax error in SQL statement "delete [*]table IMAGE_ASSET"; expected "identifier"; SQL statement:
+delete table IMAGE_ASSET [42001-232]
+2025-09-15 15:39:45.631403+05:30 jdbc[13]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Syntax error in SQL statement "delete [*]table IMAGE_ASSET"; expected "identifier"; SQL statement:
+delete table IMAGE_ASSET [42001-232]

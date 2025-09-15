@@ -20,10 +20,7 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
+import java.nio.file.*;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -43,17 +40,17 @@ public class ImageService {
     }
 
     /** store to disk + save metadata */
-    public ImageAsset upload(MultipartFile file, String uploadedBy) {
+    public ImageAsset upload(MultipartFile file, String uploadedBy, String referenceId, String referenceType) {
         if (file == null || file.isEmpty()) throw new BadRequestException("file required");
+        if (referenceId == null || referenceId.isBlank()) throw new BadRequestException("referenceId required");
+        if (referenceType == null || referenceType.isBlank()) throw new BadRequestException("referenceType required");
         if (uploadedBy == null || uploadedBy.isBlank()) uploadedBy = "anonymous";
 
-        // basic type check
         String reqType = file.getContentType() == null ? "" : file.getContentType();
         if (!reqType.startsWith("image/")) throw new BadRequestException("only image/* allowed");
 
-        // generate server-side name
         String ext = getExt(file.getOriginalFilename());
-        String storedName = UUID.randomUUID() + (ext.isEmpty()? "" : "." + ext);
+        String storedName = UUID.randomUUID() + (ext.isEmpty() ? "" : "." + ext);
         Path target = root.resolve(storedName).normalize();
         ensureInside(target);
 
@@ -61,10 +58,12 @@ public class ImageService {
         try {
             bytes = file.getBytes();
             Files.write(target, bytes, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
-        } catch (IOException e) { throw new BadRequestException("cannot write file"); }
+        } catch (IOException e) {
+            throw new BadRequestException("cannot write file");
+        }
 
         // detect dimensions
-        Integer w=null,h=null;
+        Integer w = null, h = null;
         try (InputStream in = new ByteArrayInputStream(bytes)) {
             BufferedImage img = ImageIO.read(in);
             if (img != null) { w = img.getWidth(); h = img.getHeight(); }
@@ -80,8 +79,19 @@ public class ImageService {
         asset.setChecksumSha256(HashUtil.sha256(bytes));
         asset.setWidth(w);
         asset.setHeight(h);
+        asset.setReferenceId(referenceId);
+        asset.setReferenceType(referenceType);
 
         return repo.save(asset);
+    }
+
+    public Resource getByReference(String referenceId, String referenceType) {
+        ImageAsset a = repo.findTopByReferenceIdAndReferenceTypeOrderByUploadedAtDesc(referenceId, referenceType)
+                .orElseThrow(() -> new NotFoundException("no image for ref"));
+        Path p = root.resolve(a.getStoredFilename()).normalize();
+        ensureInside(p);
+        if (!Files.exists(p)) throw new NotFoundException("file missing on disk");
+        return new FileSystemResource(p);
     }
 
     public Resource getImageData(long id) {
@@ -94,13 +104,10 @@ public class ImageService {
 
     public ImageMetaResponse getMeta(long id) {
         ImageAsset a = repo.findById(id).orElseThrow(() -> new NotFoundException("image not found"));
-        return new ImageMetaResponse(
-                a.getId(), a.getOriginalFilename(), a.getContentType(), a.getSizeBytes(),
-                a.getUploadedBy(), a.getUploadedAt(), a.getChecksumSha256(), a.getWidth(), a.getHeight()
-        );
+        return toMeta(a);
     }
 
-    public MediaType getMediaType(long id){
+    public MediaType getMediaType(long id) {
         ImageAsset a = repo.findById(id).orElseThrow(() -> new NotFoundException("image not found"));
         try {
             return a.getContentType() != null ? MediaType.parseMediaType(a.getContentType()) : MediaType.IMAGE_PNG;
@@ -109,42 +116,25 @@ public class ImageService {
         }
     }
 
-    private static String getExt(String name){
-        if (name == null) return "";
-        int dot = name.lastIndexOf('.');
-        return dot == -1 ? "" : name.substring(dot+1);
-    }
-
-    /** prevent path traversal */
-    private void ensureInside(Path p){
-        if (!p.normalize().startsWith(root)) throw new BadRequestException("invalid path");
+    public MediaType getMediaTypeByReference(String refId, String refType) {
+        ImageAsset a = repo.findTopByReferenceIdAndReferenceTypeOrderByUploadedAtDesc(refId, refType)
+                .orElseThrow(() -> new NotFoundException("no image for ref"));
+        try {
+            return a.getContentType() != null ? MediaType.parseMediaType(a.getContentType()) : MediaType.IMAGE_PNG;
+        } catch (Exception e) {
+            return MediaType.APPLICATION_OCTET_STREAM;
+        }
     }
 
     public List<ImageMetaResponse> getAllMeta() {
-        return repo.findAll().stream()
-                .map(a -> new ImageMetaResponse(
-                        a.getId(),
-                        a.getOriginalFilename(),
-                        a.getContentType(),
-                        a.getSizeBytes(),
-                        a.getUploadedBy(),
-                        a.getUploadedAt(),
-                        a.getChecksumSha256(),
-                        a.getWidth(),
-                        a.getHeight()
-                ))
-                .toList();
+        return repo.findAll().stream().map(this::toMeta).toList();
     }
 
     public ImageMetaResponse updateMeta(long id, String uploadedBy, String originalFilename) {
         var a = repo.findById(id).orElseThrow(() -> new NotFoundException("image not found"));
         if (uploadedBy != null && !uploadedBy.isBlank()) a.setUploadedBy(uploadedBy.trim());
         if (originalFilename != null && !originalFilename.isBlank()) a.setOriginalFilename(originalFilename.trim());
-        a = repo.save(a);
-        return new ImageMetaResponse(
-                a.getId(), a.getOriginalFilename(), a.getContentType(), a.getSizeBytes(),
-                a.getUploadedBy(), a.getUploadedAt(), a.getChecksumSha256(), a.getWidth(), a.getHeight()
-        );
+        return toMeta(repo.save(a));
     }
 
     public void deleteImage(long id) {
@@ -155,4 +145,27 @@ public class ImageService {
         repo.delete(a);
     }
 
+    public ImageMetaResponse getMetaByReference(String refId, String refType) {
+        var a = repo.findTopByReferenceIdAndReferenceTypeOrderByUploadedAtDesc(refId, refType)
+                .orElseThrow(() -> new NotFoundException("no image for ref"));
+        return toMeta(a);
+    }
+
+    private static String getExt(String name) {
+        if (name == null) return "";
+        int dot = name.lastIndexOf('.');
+        return dot == -1 ? "" : name.substring(dot + 1);
+    }
+
+    private void ensureInside(Path p) {
+        if (!p.normalize().startsWith(root)) throw new BadRequestException("invalid path");
+    }
+
+    private ImageMetaResponse toMeta(ImageAsset a) {
+        return new ImageMetaResponse(
+                a.getId(), a.getOriginalFilename(), a.getContentType(), a.getSizeBytes(),
+                a.getUploadedBy(), a.getUploadedAt(), a.getChecksumSha256(),
+                a.getWidth(), a.getHeight(), a.getReferenceId(), a.getReferenceType()
+        );
+    }
 }

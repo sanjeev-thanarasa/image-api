@@ -6,34 +6,40 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <style>
         :root{
-            --bg: #0f1226; --panel:#151a33; --text:#eef1ff; --muted:#9aa3c1;
+            --bg:#0f1226; --panel:#151a33; --text:#eef1ff; --muted:#9aa3c1;
             --line:#2b3157; --accent:#6c8bff; --accent2:#5ae0b5; --danger:#ff6b6b;
-            --btn:#6c8bff; --btn-ghost:transparent;
+            --btn:#6c8bff; --ghost:transparent;
+            --input-bg:transparent;
         }
         :root.light{
             --bg:#f7f8fc; --panel:#ffffff; --text:#0e1328; --muted:#5b6073;
             --line:#e8eaf4; --accent:#365cff; --accent2:#10b981; --danger:#ef4444;
-            --btn:#365cff; --btn-ghost:#ffffff;
+            --btn:#365cff; --ghost:#ffffff;
+            --input-bg:#ffffff;
         }
         *{box-sizing:border-box}
         html,body{height:100%;margin:0;font:15px/1.5 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}
         body{background:var(--bg);color:var(--text)}
-        .container{max-width:1100px;margin:0 auto;padding:24px}
+        .container{max-width:1150px;margin:0 auto;padding:24px}
         header{display:flex;gap:16px;align-items:center;justify-content:space-between;margin-bottom:18px}
         .title{font-size:28px;font-weight:800;color:var(--accent);letter-spacing:.3px}
         .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-        input[type="text"]{padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:transparent;color:var(--text)}
+        input[type="text"], select{
+            padding:10px 12px;border:1px solid var(--line);border-radius:10px;
+            background:var(--input-bg);color:var(--text)
+        }
         input[type="file"]{color:var(--text)}
         button{all:unset;background:var(--btn);color:#fff;padding:10px 14px;border-radius:10px;cursor:pointer;font-weight:700;
             box-shadow:0 8px 18px rgba(86,112,255,.35)}
-        .ghost{background:var(--btn-ghost);border:1px solid var(--line);color:var(--text);box-shadow:none}
+        .ghost{background:var(--ghost);border:1px solid var(--line);color:var(--text);box-shadow:none}
         .muted{color:var(--muted)}
         .panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px}
+        .panel + .panel{margin-top:14px}
         table{width:100%;border-collapse:collapse}
-        th,td{padding:14px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle}
+        th,td{padding:12px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle}
         thead th{font-weight:800;color:var(--muted);font-size:13px;text-transform:uppercase;letter-spacing:.3px}
         tr:hover{background:rgba(108,139,255,.08)}
-        img.thumb{max-width:78px;max-height:78px;border-radius:8px;border:1px solid var(--line);display:block}
+        img.thumb{max-width:72px;max-height:72px;border-radius:8px;border:1px solid var(--line);display:block}
         .right{display:flex;gap:8px;justify-content:flex-end}
         .pill{padding:4px 10px;border-radius:999px;border:1px solid var(--line);font-size:12px;color:var(--muted)}
         .status{min-height:22px;margin:10px 2px 14px;font-weight:600}
@@ -41,7 +47,7 @@
 
         /* modal */
         .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;place-items:center;z-index:50}
-        .modal{width:min(520px,92vw);background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px}
+        .modal{width:min(560px,92vw);background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px}
         .modal h3{margin:0 0 12px}
         .modal .actions{display:flex;gap:10px;justify-content:flex-end;margin-top:12px}
         .switch{display:flex;align-items:center;gap:8px}
@@ -62,31 +68,48 @@
         </label>
     </header>
 
+    <!-- Upload -->
     <div class="panel">
         <form id="uploadForm" class="row">
             <input type="file" name="file" id="file" required>
             <input type="text" name="uploadedBy" placeholder="Your name (optional)" />
+            <input type="text" name="referenceId" id="refId" placeholder="Reference ID" required />
+            <input type="text" name="referenceType" id="refType" placeholder="Reference Type" required />
             <button type="submit">Upload</button>
             <button type="button" class="ghost" id="refreshBtn">Refresh</button>
         </form>
         <div id="status" class="status"></div>
+    </div>
 
-        <div style="overflow:auto">
-            <table id="imageTable">
-                <thead>
-                <tr>
-                    <th>Preview</th>
-                    <th>Filename</th>
-                    <th>Type</th>
-                    <th>Size</th>
-                    <th>Uploaded By</th>
-                    <th>Uploaded At</th>
-                    <th class="right">Actions</th>
-                </tr>
-                </thead>
-                <tbody></tbody>
-            </table>
+    <!-- Filters -->
+    <div class="panel">
+        <div class="row">
+            <span class="pill">Filter</span>
+            <input type="text" id="fRefId" placeholder="refId contains..." />
+            <input type="text" id="fRefType" placeholder="refType contains..." />
+            <input type="text" id="fName" placeholder="filename contains..." />
+            <button type="button" class="ghost" id="clearFilters">Clear</button>
         </div>
+    </div>
+
+    <!-- Table -->
+    <div class="panel" style="overflow:auto">
+        <table id="imageTable">
+            <thead>
+            <tr>
+                <th>Preview</th>
+                <th>Filename</th>
+                <th>Type</th>
+                <th>Size</th>
+                <th>Uploaded By</th>
+                <th>Uploaded At</th>
+                <th>Ref ID</th>
+                <th>Ref Type</th>
+                <th class="right">Actions</th>
+            </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
     </div>
 </div>
 
@@ -97,11 +120,11 @@
         <form id="editForm">
             <input type="hidden" id="editId">
             <div class="row" style="margin-bottom:8px">
-                <label class="pill" style="min-width:130px">Original Filename</label>
+                <label class="pill" style="min-width:140px">Original Filename</label>
                 <input id="editFilename" type="text" style="flex:1">
             </div>
-            <div class="row">
-                <label class="pill" style="min-width:130px">Uploaded By</label>
+            <div class="row" style="margin-bottom:8px">
+                <label class="pill" style="min-width:140px">Uploaded By</label>
                 <input id="editBy" type="text" style="flex:1">
             </div>
             <div class="actions">
@@ -143,14 +166,37 @@
         if(!r.ok) throw new Error('update failed');
         return r.json();
     }
+    function dlByRef(referenceId, referenceType){
+        const url = '/images/ref?referenceId='+encodeURIComponent(referenceId)+'&referenceType='+encodeURIComponent(referenceType);
+        window.open(url, '_blank');
+    }
+
+    /* ---------- Filters ---------- */
+    const fRefId = document.getElementById('fRefId');
+    const fRefType = document.getElementById('fRefType');
+    const fName = document.getElementById('fName');
+    const clearBtn = document.getElementById('clearFilters');
+    clearBtn.addEventListener('click', ()=>{ fRefId.value=''; fRefType.value=''; fName.value=''; render(); });
 
     /* ---------- DOM rendering ---------- */
     const tbody = document.querySelector('#imageTable tbody');
+    let cache = []; // keep a local cache to filter client-side
+
     function bytes(n){
         if(n<1024) return n+' B';
         if(n<1024*1024) return (n/1024).toFixed(1)+' KB';
         return (n/1024/1024).toFixed(1)+' MB';
     }
+
+    function matchesFilter(m){
+        const i = (fRefId.value||'').toLowerCase();
+        const t = (fRefType.value||'').toLowerCase();
+        const nm = (fName.value||'').toLowerCase();
+        return (!i || (m.referenceId||'').toLowerCase().includes(i))
+            && (!t || (m.referenceType||'').toLowerCase().includes(t))
+            && (!nm || (m.originalFilename||'').toLowerCase().includes(nm));
+    }
+
     function row(meta){
         const tr = document.createElement('tr');
         tr.innerHTML = `
@@ -160,45 +206,64 @@
     <td>${bytes(meta.sizeBytes)}</td>
     <td>${meta.uploadedBy ?? ''}</td>
     <td>${meta.uploadedAt}</td>
+    <td>${meta.referenceId ?? ''}</td>
+    <td>${meta.referenceType ?? ''}</td>
     <td class="right">
-      <button type="button" class="ghost" data-act="download" data-id="${meta.id}">Download</button>
+      <button type="button" class="ghost" data-act="download" data-refid="${meta.referenceId??''}" data-reftype="${meta.referenceType??''}">Download</button>
       <button type="button" data-act="edit" data-id="${meta.id}" data-name="${meta.originalFilename??''}" data-by="${meta.uploadedBy??''}">Edit</button>
       <button type="button" class="ghost" style="color:var(--danger);border-color:var(--danger)" data-act="delete" data-id="${meta.id}">Delete</button>
     </td>`;
         return tr;
     }
+
     async function render(){
-        const data = await listAll();
+        if(cache.length === 0){
+            cache = await listAll();
+        }
         tbody.innerHTML = '';
-        data.forEach(m => tbody.appendChild(row(m)));
+        cache.filter(matchesFilter).forEach(m => tbody.appendChild(row(m)));
     }
+
+    /* filter live updates */
+    [fRefId, fRefType, fName].forEach(el => el.addEventListener('input', render));
 
     /* ---------- Upload ---------- */
     const statusEl = document.getElementById('status');
     document.getElementById('uploadForm').addEventListener('submit', async (e)=>{
         e.preventDefault();
         const fd = new FormData(e.target);
+        if(!fd.get('referenceId') || !fd.get('referenceType')){
+            statusEl.textContent = 'Reference ID & Type are required.'; statusEl.className='status err'; return;
+        }
         statusEl.textContent = 'Uploading...';
         const res = await fetch('/images/upload', {method:'POST', body: fd});
-        if(res.ok){ statusEl.textContent = 'Upload successful!'; statusEl.className='status ok'; await render(); e.target.reset(); }
-        else { statusEl.textContent = 'Upload failed!'; statusEl.className='status err'; }
+        if(res.ok){
+            statusEl.textContent = 'Upload successful!'; statusEl.className='status ok';
+            cache = []; await render(); e.target.reset();
+        } else {
+            statusEl.textContent = 'Upload failed!'; statusEl.className='status err';
+        }
     });
-    document.getElementById('refreshBtn').addEventListener('click', render);
+    document.getElementById('refreshBtn').addEventListener('click', async ()=>{ cache=[]; await render(); });
 
     /* ---------- Row actions ---------- */
     tbody.addEventListener('click', async (e)=>{
         const btn = e.target.closest('button[data-act]');
         if(!btn) return;
-        const id = btn.getAttribute('data-id');
         const act = btn.getAttribute('data-act');
         if(act==='download'){
-            window.open('/images/'+id, '_blank');
+            const refId = btn.getAttribute('data-refid');
+            const refType = btn.getAttribute('data-reftype');
+            if(!refId || !refType){ alert('No reference set for this item'); return; }
+            dlByRef(refId, refType);
         }else if(act==='delete'){
+            const id = btn.getAttribute('data-id');
             if(confirm('Delete this image?')){
-                try{ await deleteOne(id); await render(); }
+                try{ await deleteOne(id); cache = cache.filter(x=>x.id!==Number(id)); await render(); }
                 catch(err){ alert('Delete failed'); }
             }
         }else if(act==='edit'){
+            const id = btn.getAttribute('data-id');
             openEdit(id, btn.getAttribute('data-name')||'', btn.getAttribute('data-by')||'');
         }
     });
@@ -208,18 +273,20 @@
     const editId = document.getElementById('editId');
     const editFilename = document.getElementById('editFilename');
     const editBy = document.getElementById('editBy');
+
     function openEdit(id, name, by){
         editId.value = id; editFilename.value = name; editBy.value = by;
         backdrop.style.display = 'grid';
     }
     document.getElementById('cancelEdit').addEventListener('click', ()=> backdrop.style.display='none');
+
     document.getElementById('editForm').addEventListener('submit', async (e)=>{
         e.preventDefault();
         const payload = { originalFilename: editFilename.value, uploadedBy: editBy.value };
         try{
             await updateMeta(editId.value, payload);
             backdrop.style.display='none';
-            await render();
+            cache = []; await render();
         }catch(err){
             alert('Update failed');
         }
