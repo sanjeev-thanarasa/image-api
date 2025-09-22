@@ -39,7 +39,7 @@ public class ImageService {
         log.info("Storage at {}", root);
     }
 
-    /** store to disk + save metadata */
+
     public ImageAsset upload(MultipartFile file, String uploadedBy, String referenceId, String referenceType) {
         if (file == null || file.isEmpty()) throw new BadRequestException("file required");
         if (referenceId == null || referenceId.isBlank()) throw new BadRequestException("referenceId required");

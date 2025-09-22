@@ -30,26 +30,5 @@ public class ImageAsset {
     @Column(nullable = false)
     private String referenceType;
 
-//    /* getters & setters */
-//    public Long getId() { return id; }
-//    public String getOriginalFilename() { return originalFilename; }
-//    public void setOriginalFilename(String v) { this.originalFilename = v; }
-//    public String getStoredFilename() { return storedFilename; }
-//    public void setStoredFilename(String v) { this.storedFilename = v; }
-//    public String getContentType() { return contentType; }
-//    public void setContentType(String v) { this.contentType = v; }
-//    public long getSizeBytes() { return sizeBytes; }
-//    public void setSizeBytes(long v) { this.sizeBytes = v; }
-//    public String getUploadedBy() { return uploadedBy; }
-//    public void setUploadedBy(String v) { this.uploadedBy = v; }
-//    public Instant getUploadedAt() { return uploadedAt; }
-//    public void setUploadedAt(Instant v) { this.uploadedAt = v; }
-//    public String getChecksumSha256() { return checksumSha256; }
-//    public void setChecksumSha256(String v) { this.checksumSha256 = v; }
-//    public Integer getWidth() { return width; }
-//    public void setWidth(Integer width) { this.width = width; }
-//    public Integer getHeight() { return height; }
-//    public void setHeight(Integer height) { this.height = height; }
-
 
 }
